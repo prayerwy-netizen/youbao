@@ -295,8 +295,14 @@
       // 初始化日期选择器，默认为今天
       const dateInput = document.getElementById('recordDate');
       const today = new Date();
-      dateInput.value = today.toISOString().split('T')[0];
-      dateInput.max = today.toISOString().split('T')[0]; // 不能选择未来日期
+      // 使用本地时区格式化日期,避免时区问题
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      const todayStr = `${year}-${month}-${day}`;
+      console.log('📅 当前日期:', todayStr, '本地时间:', today.toLocaleString());
+      dateInput.value = todayStr;
+      dateInput.max = todayStr; // 不能选择未来日期
 
       // 加载任务列表并渲染表格
       tasks = dataManager.getTasks().filter(t => t.enabled);
@@ -377,7 +383,11 @@
 
       // 判断是否为今天
       const today = new Date();
-      const dateStr = selectedDate === today.toISOString().split('T')[0] ? '今天' : selectedDate;
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      const todayStr = `${year}-${month}-${day}`;
+      const dateStr = selectedDate === todayStr ? '今天' : selectedDate;
       utils.showToast(`成功记录${dateStr}的${records.length}项任务！`);
 
       // 重置所有输入框
