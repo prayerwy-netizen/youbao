@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>设置 - 宥宝礼物兑换系统</title>
+  <link rel="stylesheet" href="css/common.css?v=5">
+  <link rel="stylesheet" href="css/components.css?v=5">
+  <style>
+    body {
+      background: var(--bg-light);
+      padding-bottom: 80px;
+    }
+
+    .page-content {
+      padding: var(--spacing-lg) var(--spacing-md);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .settings-section {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-normal);
+      margin-bottom: var(--spacing-lg);
+      overflow: hidden;
+    }
+
+    .section-title {
+      padding: var(--spacing-md);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-dark);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .settings-list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .setting-item {
+      padding: var(--spacing-md);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: background var(--transition-normal) ease;
+    }
+
+    .setting-item:last-child {
+      border-bottom: none;
+    }
+
+    .setting-item:active {
+      background: var(--bg-light);
+    }
+
+    .setting-info {
+      flex: 1;
+    }
+
+    .setting-label {
+      font-size: 16px;
+      color: var(--text-dark);
+      margin-bottom: 4px;
+    }
+
+    .setting-desc {
+      font-size: 14px;
+      color: var(--text-light);
+    }
+
+    .setting-arrow {
+      font-size: 18px;
+      color: var(--text-light);
+    }
+
+    .danger-section .setting-item {
+      color: var(--error-color);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--spacing-md);
+      padding: var(--spacing-md);
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: var(--spacing-md);
+      background: var(--bg-light);
+      border-radius: var(--radius-md);
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary-color);
+      font-family: var(--font-mono);
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: var(--text-medium);
+    }
+
+    .pin-input-container {
+      display: flex;
+      justify-content: center;
+      gap: var(--spacing-md);
+      margin: var(--spacing-lg) 0;
+    }
+
+    .pin-input-dot {
+      width: 50px;
+      height: 50px;
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 24px;
+      text-align: center;
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+
+    .pin-input-dot:focus {
+      border-color: var(--primary-color);
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- 顶部导航栏 -->
+  <div class="top-nav">
+    <div class="top-nav-left">
+      <button onclick="window.location.href='parent-record.html'">◀ 返回</button>
+    </div>
+    <div class="top-nav-title">设置</div>
+    <div class="top-nav-right">
+      <button onclick="utils.exitParentMode()">退出</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <!-- 数据统计 -->
+    <div class="settings-section">
+      <div class="section-title">数据统计</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="totalRecords">0</div>
+          <div class="stat-label">总记录数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalTasks">0</div>
+          <div class="stat-label">任务数量</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalGifts">0</div>
+          <div class="stat-label">礼物数量</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalScore">0</div>
+          <div class="stat-label">当前积分</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 积分管理 -->
+    <div class="settings-section">
+      <div class="section-title">积分管理</div>
+      <div class="settings-list">
+        <div class="setting-item" onclick="showInitScoreModal()">
+          <div class="setting-info">
+            <div class="setting-label">积分初始化</div>
+            <div class="setting-desc">将纸质记录的积分录入系统</div>
+          </div>
+          <div class="setting-arrow">›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 安全设置 -->
+    <div class="settings-section">
+      <div class="section-title">安全设置</div>
+      <div class="settings-list">
+        <div class="setting-item" onclick="showChangePinModal()">
+          <div class="setting-info">
+            <div class="setting-label">修改PIN码</div>
+            <div class="setting-desc">修改家长验证PIN码</div>
+          </div>
+          <div class="setting-arrow">›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 数据管理 -->
+    <div class="settings-section">
+      <div class="section-title">数据管理</div>
+      <div class="settings-list">
+        <div class="setting-item" id="cloudSyncStatus" onclick="manualCloudSync()">
+          <div class="setting-info">
+            <div class="setting-label">云端同步</div>
+            <div class="setting-desc" id="cloudSyncDesc">检查云同步状态...</div>
+          </div>
+          <div class="setting-arrow">↻</div>
+        </div>
+        <div class="setting-item" id="migrateToCloud" onclick="migrateLocalToCloud()" style="display:none;">
+          <div class="setting-info">
+            <div class="setting-label">迁移数据到云端</div>
+            <div class="setting-desc">将本地数据上传到Supabase云端</div>
+          </div>
+          <div class="setting-arrow">☁</div>
+        </div>
+        <div class="setting-item" onclick="exportData()">
+          <div class="setting-info">
+            <div class="setting-label">导出数据</div>
+            <div class="setting-desc">备份所有数据到JSON文件</div>
+          </div>
+          <div class="setting-arrow">›</div>
+        </div>
+        <div class="setting-item" onclick="document.getElementById('importFile').click()">
+          <div class="setting-info">
+            <div class="setting-label">导入数据</div>
+            <div class="setting-desc">从JSON文件还原数据</div>
+          </div>
+          <div class="setting-arrow">›</div>
+        </div>
+        <div class="setting-item" onclick="showDeleteRecordsModal()">
+          <div class="setting-info">
+            <div class="setting-label">删除记录</div>
+            <div class="setting-desc">按日期查看和删除积分记录</div>
+          </div>
+          <div class="setting-arrow">›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 危险操作 -->
+    <div class="settings-section danger-section">
+      <div class="section-title" style="color: var(--error-color);">危险操作</div>
+      <div class="settings-list">
+        <div class="setting-item" onclick="clearAllData()">
+          <div class="setting-info">
+            <div class="setting-label">清空所有数据</div>
+            <div class="setting-desc">删除所有记录、任务和礼物</div>
+          </div>
+          <div class="setting-arrow">›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 关于 -->
+    <div class="settings-section">
+      <div class="section-title">关于</div>
+      <div class="settings-list">
+        <div class="setting-item" style="cursor: default;">
+          <div class="setting-info">
+            <div class="setting-label">版本信息</div>
+            <div class="setting-desc">宥宝礼物兑换系统 v1.0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部菜单 -->
+  <div class="parent-menu">
+    <button class="menu-btn" onclick="window.location.href='parent-record.html'">快速记账</button>
+    <button class="menu-btn" onclick="window.location.href='parent-tasks.html'">任务管理</button>
+    <button class="menu-btn" onclick="window.location.href='parent-gifts.html'">礼物管理</button>
+    <button class="menu-btn" onclick="window.location.href='parent-approval.html'">兑换审批</button>
+  </div>
+
+  <!-- 隐藏的文件输入 -->
+  <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
+
+  <!-- Supabase 客户端库 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase 配置 -->
+  <script src="js/supabase-config.js?v=1"></script>
+  <script src="js/common.js?v=5"></script>
+  <script>
+    utils.requireParentMode();
+
+    // 初始化
+    function init() {
+      updateStats();
+      updateCloudSyncStatus();
+    }
+
+    // 更新云同步状态
+    function updateCloudSyncStatus() {
+      const statusDesc = document.getElementById('cloudSyncDesc');
+      const migrateBtn = document.getElementById('migrateToCloud');
+
+      if (window.supabaseSync && window.supabaseSync.enabled) {
+        statusDesc.textContent = '云同步已启用 - 点击手动同步';
+        statusDesc.style.color = 'var(--success-color)';
+
+        // 检查是否有本地数据需要迁移
+        const hasLocalData = localStorage.getItem('dingdang_records') &&
+                            JSON.parse(localStorage.getItem('dingdang_records')).length > 0;
+        if (hasLocalData) {
+          migrateBtn.style.display = 'flex';
+        }
+      } else {
+        statusDesc.textContent = '未配置云同步 - 仅使用本地存储';
+        statusDesc.style.color = 'var(--text-light)';
+        migrateBtn.style.display = 'none';
+      }
+    }
+
+    // 手动云同步
+    async function manualCloudSync() {
+      if (!window.supabaseSync || !window.supabaseSync.enabled) {
+        utils.showToast('云同步未启用', 'warning');
+        return;
+      }
+
+      utils.showToast('正在同步...', 'info');
+      const success = await window.supabaseSync.manualSync();
+
+      if (success) {
+        utils.showToast('同步成功！');
+        updateStats();
+      } else {
+        utils.showToast('同步失败，请检查网络连接', 'error');
+      }
+    }
+
+    // 迁移本地数据到云端
+    async function migrateLocalToCloud() {
+      if (!window.supabaseSync || !window.supabaseSync.enabled) {
+        utils.showToast('云同步未启用', 'warning');
+        return;
+      }
+
+      if (!confirm('确定要将本地数据上传到云端吗？\n\n这将把所有本地任务、礼物、记录和申请上传到Supabase。')) {
+        return;
+      }
+
+      utils.showToast('开始迁移数据，请稍候...', 'info');
+
+      const result = await window.supabaseSync.migrateLocalToCloud();
+
+      if (result.success) {
+        utils.showToast(`数据迁移完成！共上传 ${result.count} 条数据`);
+        document.getElementById('migrateToCloud').style.display = 'none';
+      } else {
+        utils.showToast('数据迁移失败: ' + result.message, 'error');
+      }
+    }
+
+    // 更新统计数据
+    function updateStats() {
+      const records = dataManager.getRecords();
+      const tasks = dataManager.getTasks();
+      const gifts = dataManager.getGifts();
+      const totalScore = dataManager.getTotalScore();
+
+      document.getElementById('totalRecords').textContent = records.length;
+      document.getElementById('totalTasks').textContent = tasks.length;
+      document.getElementById('totalGifts').textContent = gifts.length;
+      document.getElementById('totalScore').textContent = totalScore;
+    }
+
+    // 显示积分初始化弹窗
+    function showInitScoreModal() {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal">
+          <h3 class="modal-title">积分初始化</h3>
+          <p style="color: var(--text-medium); margin-bottom: var(--spacing-lg);">
+            将纸质记录的积分一次性录入系统。这会创建一条特殊的初始化记录。
+          </p>
+          <form id="initScoreForm" onsubmit="submitInitScore(event)">
+            <div class="form-group">
+              <label class="form-label form-label-required">初始积分</label>
+              <input type="number" class="input" id="initScore" placeholder="输入初始积分值" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">备注说明（可选）</label>
+              <textarea class="textarea" id="initNote" placeholder="例如：从纸质记录迁移的积分" maxlength="200"></textarea>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn-secondary btn-half" onclick="this.closest('.modal-overlay').remove()">取消</button>
+              <button type="submit" class="btn-primary btn-half">确定</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      setTimeout(() => overlay.classList.add('show'), 10);
+
+      overlay.onclick = (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('show');
+          setTimeout(() => overlay.remove(), 200);
+        }
+      };
+    }
+
+    // 提交积分初始化
+    function submitInitScore(event) {
+      event.preventDefault();
+
+      const score = parseInt(document.getElementById('initScore').value);
+      const note = document.getElementById('initNote').value.trim() || '积分初始化';
+
+      utils.showConfirm(
+        '确认初始化',
+        `确定要添加${score}分的初始积分吗？`,
+        () => {
+          dataManager.addRecord({
+            taskId: 0,
+            taskName: '积分初始化',
+            score: score,
+            note: note
+          });
+
+          utils.showToast('积分初始化成功！');
+          updateStats();
+          document.querySelector('.modal-overlay').remove();
+        }
+      );
+    }
+
+    // 显示修改PIN码弹窗
+    function showChangePinModal() {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal">
+          <h3 class="modal-title">修改PIN码</h3>
+          <form id="changePinForm" onsubmit="submitChangePin(event)">
+            <div class="form-group">
+              <label class="form-label form-label-required">当前PIN码</label>
+              <div class="pin-input-container">
+                <input type="password" class="pin-input-dot" maxlength="1" id="oldPin0" oninput="moveFocus(this, 'oldPin1')">
+                <input type="password" class="pin-input-dot" maxlength="1" id="oldPin1" oninput="moveFocus(this, 'oldPin2')">
+                <input type="password" class="pin-input-dot" maxlength="1" id="oldPin2" oninput="moveFocus(this, 'oldPin3')">
+                <input type="password" class="pin-input-dot" maxlength="1" id="oldPin3">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required">新PIN码</label>
+              <div class="pin-input-container">
+                <input type="password" class="pin-input-dot" maxlength="1" id="newPin0" oninput="moveFocus(this, 'newPin1')">
+                <input type="password" class="pin-input-dot" maxlength="1" id="newPin1" oninput="moveFocus(this, 'newPin2')">
+                <input type="password" class="pin-input-dot" maxlength="1" id="newPin2" oninput="moveFocus(this, 'newPin3')">
+                <input type="password" class="pin-input-dot" maxlength="1" id="newPin3">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required">确认新PIN码</label>
+              <div class="pin-input-container">
+                <input type="password" class="pin-input-dot" maxlength="1" id="confirmPin0" oninput="moveFocus(this, 'confirmPin1')">
+                <input type="password" class="pin-input-dot" maxlength="1" id="confirmPin1" oninput="moveFocus(this, 'confirmPin2')">
+                <input type="password" class="pin-input-dot" maxlength="1" id="confirmPin2" oninput="moveFocus(this, 'confirmPin3')">
+                <input type="password" class="pin-input-dot" maxlength="1" id="confirmPin3">
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn-secondary btn-half" onclick="this.closest('.modal-overlay').remove()">取消</button>
+              <button type="submit" class="btn-primary btn-half">确定</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      setTimeout(() => overlay.classList.add('show'), 10);
+
+      // 自动聚焦第一个输入框
+      setTimeout(() => document.getElementById('oldPin0').focus(), 100);
+
+      overlay.onclick = (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('show');
+          setTimeout(() => overlay.remove(), 200);
+        }
+      };
+    }
+
+    // 自动移动焦点
+    function moveFocus(current, nextId) {
+      if (current.value.length === 1) {
+        const next = document.getElementById(nextId);
+        if (next) next.focus();
+      }
+    }
+
+    // 获取PIN码
+    function getPin(prefix) {
+      let pin = '';
+      for (let i = 0; i < 4; i++) {
+        const input = document.getElementById(prefix + i);
+        if (input && input.value) {
+          pin += input.value;
+        }
+      }
+      return pin;
+    }
+
+    // 提交修改PIN码
+    function submitChangePin(event) {
+      event.preventDefault();
+
+      const oldPin = getPin('oldPin');
+      const newPin = getPin('newPin');
+      const confirmPin = getPin('confirmPin');
+
+      if (oldPin.length !== 4 || newPin.length !== 4 || confirmPin.length !== 4) {
+        utils.showToast('请输入完整的PIN码', 'error');
+        return;
+      }
+
+      if (!dataManager.verifyPin(oldPin)) {
+        utils.showToast('当前PIN码错误', 'error');
+        return;
+      }
+
+      if (newPin !== confirmPin) {
+        utils.showToast('两次输入的新PIN码不一致', 'error');
+        return;
+      }
+
+      if (!/^\d{4}$/.test(newPin)) {
+        utils.showToast('PIN码必须是4位数字', 'error');
+        return;
+      }
+
+      dataManager.changePin(newPin);
+      utils.showToast('PIN码修改成功！');
+      document.querySelector('.modal-overlay').remove();
+    }
+
+    // 导出数据
+    function exportData() {
+      const data = {
+        tasks: dataManager.getTasks(),
+        records: dataManager.getRecords(),
+        gifts: dataManager.getGifts(),
+        requests: dataManager.getRequests(),
+        exportDate: new Date().toISOString(),
+        version: '1.0'
+      };
+
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dingdang-backup-${new Date().getTime()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      utils.showToast('数据导出成功！');
+    }
+
+    // 导入数据
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+
+          utils.showConfirm(
+            '确认导入',
+            '导入数据将覆盖当前所有数据，是否继续？\n\n建议先导出当前数据备份。',
+            () => {
+              if (data.tasks) localStorage.setItem('dingdang_tasks', JSON.stringify(data.tasks));
+              if (data.records) localStorage.setItem('dingdang_records', JSON.stringify(data.records));
+              if (data.gifts) localStorage.setItem('dingdang_gifts', JSON.stringify(data.gifts));
+              if (data.requests) localStorage.setItem('dingdang_requests', JSON.stringify(data.requests));
+
+              utils.showToast('数据导入成功！');
+              setTimeout(() => location.reload(), 1000);
+            }
+          );
+        } catch (error) {
+          utils.showToast('文件格式错误，导入失败', 'error');
+        }
+      };
+      reader.readAsText(file);
+
+      // 重置文件输入
+      event.target.value = '';
+    }
+
+    // 清空所有数据
+    async function clearAllData() {
+      utils.showConfirm(
+        '⚠️ 危险操作',
+        '确定要清空所有数据吗？\n\n这将删除本地和云端的所有任务、记录、礼物和申请，且无法恢复！\n\n建议先导出备份。',
+        () => {
+          utils.showConfirm(
+            '⚠️ 二次确认',
+            '真的要删除所有数据吗？此操作无法撤销！',
+            async () => {
+              try {
+                // 清空本地数据
+                localStorage.removeItem('dingdang_tasks');
+                localStorage.removeItem('dingdang_records');
+                localStorage.removeItem('dingdang_gifts');
+                localStorage.removeItem('dingdang_requests');
+
+                // 清空云端数据（如果云同步已启用）
+                if (window.supabaseSync && window.supabaseSync.enabled) {
+                  console.log('🗑️ 正在清空云端数据...');
+
+                  const { error: recordsError } = await supabaseClient
+                    .from('youbao_records')
+                    .delete()
+                    .neq('id', 0); // 删除所有记录
+
+                  const { error: requestsError } = await supabaseClient
+                    .from('youbao_requests')
+                    .delete()
+                    .neq('id', 0); // 删除所有兑换申请
+
+                  const { error: tasksError } = await supabaseClient
+                    .from('youbao_tasks')
+                    .delete()
+                    .neq('id', 0); // 删除所有任务
+
+                  const { error: giftsError } = await supabaseClient
+                    .from('youbao_gifts')
+                    .delete()
+                    .neq('id', 0); // 删除所有礼物
+
+                  if (recordsError || requestsError || tasksError || giftsError) {
+                    console.error('清空云端数据时出现错误:', {
+                      recordsError,
+                      requestsError,
+                      tasksError,
+                      giftsError
+                    });
+                    utils.showToast('本地数据已清空，但云端数据清空失败。请查看控制台', 'warning');
+                  } else {
+                    console.log('✅ 云端数据已清空');
+                    utils.showToast('所有数据已清空（本地+云端）');
+                  }
+                } else {
+                  utils.showToast('本地数据已清空');
+                }
+
+                setTimeout(() => location.reload(), 1500);
+              } catch (error) {
+                console.error('清空数据失败:', error);
+                utils.showToast('清空数据时出现错误，请查看控制台', 'error');
+              }
+            }
+          );
+        }
+      );
+    }
+
+    // 页面加载完成后初始化
+    // 显示删除记录弹窗
+    function showDeleteRecordsModal() {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal" style="max-width: 700px;">
+          <h3 class="modal-title">删除记录</h3>
+
+          <div class="form-group">
+            <label class="form-label">选择日期</label>
+            <input type="date" class="input" id="deleteRecordsDate" onchange="loadDeleteRecords()">
+          </div>
+
+          <div id="deleteRecordsStats" style="display: none; padding: 15px; background: #e8f4fd; border-radius: 8px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
+              <span>记录总数：</span>
+              <span id="deleteStatsCount">0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
+              <span>正向积分：</span>
+              <span id="deleteStatsPositive" style="color: var(--success-color);">0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
+              <span>负向积分：</span>
+              <span id="deleteStatsNegative" style="color: var(--error-color);">0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 16px;">
+              <span>当日总分：</span>
+              <span id="deleteStatsTotal">0</span>
+            </div>
+          </div>
+
+          <div id="deleteRecordsList" style="max-height: 400px; overflow-y: auto; margin-bottom: 15px;">
+            <div style="text-align: center; padding: 40px; color: var(--text-light);">请选择日期查看记录</div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary btn-half" onclick="this.closest('.modal-overlay').remove()">关闭</button>
+            <button type="button" class="btn-danger btn-half" id="deleteAllRecordsBtn" style="display: none;" onclick="deleteAllRecordsOfDate()">删除当天所有记录</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      setTimeout(() => overlay.classList.add('show'), 10);
+
+      // 设置默认日期为今天
+      const dateInput = document.getElementById('deleteRecordsDate');
+      dateInput.value = new Date().toISOString().split('T')[0];
+      loadDeleteRecords();
+
+      overlay.onclick = (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('show');
+          setTimeout(() => overlay.remove(), 200);
+        }
+      };
+    }
+
+    let currentDeleteDate = null;
+    let currentDeleteRecords = [];
+
+    function loadDeleteRecords() {
+      const dateInput = document.getElementById('deleteRecordsDate');
+      currentDeleteDate = dateInput.value;
+
+      if (!currentDeleteDate) {
+        document.getElementById('deleteRecordsList').innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-light);">请选择日期查看记录</div>';
+        document.getElementById('deleteRecordsStats').style.display = 'none';
+        document.getElementById('deleteAllRecordsBtn').style.display = 'none';
+        return;
+      }
+
+      const allRecords = dataManager.getRecords();
+      const targetDate = new Date(currentDeleteDate + 'T00:00:00');
+
+      currentDeleteRecords = allRecords.filter(record => {
+        const recordDate = new Date(record.date);
+        return recordDate.toDateString() === targetDate.toDateString();
+      });
+
+      displayDeleteRecords();
+    }
+
+    function displayDeleteRecords() {
+      const listContainer = document.getElementById('deleteRecordsList');
+      const statsSection = document.getElementById('deleteRecordsStats');
+      const deleteAllBtn = document.getElementById('deleteAllRecordsBtn');
+
+      if (currentDeleteRecords.length === 0) {
+        listContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-light);">该日期没有记录</div>';
+        statsSection.style.display = 'none';
+        deleteAllBtn.style.display = 'none';
+        return;
+      }
+
+      // 计算统计数据
+      let totalCount = currentDeleteRecords.length;
+      let positiveScore = 0;
+      let negativeScore = 0;
+
+      currentDeleteRecords.forEach(record => {
+        if (record.score > 0) {
+          positiveScore += record.score;
+        } else {
+          negativeScore += record.score;
+        }
+      });
+
+      let totalScore = positiveScore + negativeScore;
+
+      // 显示统计
+      document.getElementById('deleteStatsCount').textContent = totalCount;
+      document.getElementById('deleteStatsPositive').textContent = '+' + positiveScore;
+      document.getElementById('deleteStatsNegative').textContent = negativeScore;
+      document.getElementById('deleteStatsTotal').textContent = (totalScore >= 0 ? '+' : '') + totalScore;
+      statsSection.style.display = 'block';
+      deleteAllBtn.style.display = 'block';
+
+      // 显示记录列表
+      let html = '';
+      currentDeleteRecords.forEach(record => {
+        const recordDate = new Date(record.date);
+        const dateStr = recordDate.toLocaleString('zh-CN', {
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        const scoreClass = record.score >= 0 ? 'positive' : 'negative';
+        const scoreColor = record.score >= 0 ? 'var(--success-color)' : 'var(--error-color)';
+        const scorePrefix = record.score >= 0 ? '+' : '';
+
+        html += `
+          <div style="padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="flex: 1;">
+              <div style="font-size: 12px; color: var(--text-medium); margin-bottom: 4px;">${dateStr}</div>
+              <div style="font-size: 14px; font-weight: 500;">${record.taskName}${record.note ? ' - ' + record.note : ''}</div>
+            </div>
+            <div style="font-size: 16px; font-weight: 600; color: ${scoreColor}; margin-right: 10px;">${scorePrefix}${record.score}</div>
+            <button onclick="deleteSingleRecord(${record.id})" style="padding: 6px 12px; background: var(--error-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px;">删除</button>
+          </div>
+        `;
+      });
+
+      listContainer.innerHTML = html;
+    }
+
+    async function deleteSingleRecord(recordId) {
+      if (!confirm('确定要删除这条记录吗？')) {
+        return;
+      }
+
+      try {
+        // 使用 dataManager 的删除方法，会自动同步到云端
+        await dataManager.deleteRecord(recordId);
+
+        utils.showToast('记录已删除');
+        loadDeleteRecords();
+        updateStats();
+      } catch (error) {
+        console.error('删除记录失败:', error);
+        utils.showToast('删除失败，请查看控制台了解详情', 'error');
+      }
+    }
+
+    async function deleteAllRecordsOfDate() {
+      if (!currentDeleteDate) return;
+
+      const count = currentDeleteRecords.length;
+      if (count === 0) return;
+
+      if (!confirm(`确定要删除 ${currentDeleteDate} 的所有 ${count} 条记录吗？\n\n此操作不可恢复！`)) {
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+
+      // 逐条删除记录（会自动同步到云端）
+      for (const record of currentDeleteRecords) {
+        try {
+          await dataManager.deleteRecord(record.id);
+          successCount++;
+        } catch (error) {
+          console.error(`删除记录 ${record.id} 失败:`, error);
+          failCount++;
+        }
+      }
+
+      if (failCount > 0) {
+        utils.showToast(`删除完成：成功 ${successCount} 条，失败 ${failCount} 条。请查看控制台`, 'warning');
+      } else {
+        utils.showToast(`已删除 ${count} 条记录`);
+      }
+
+      loadDeleteRecords();
+      updateStats();
+    }
+
+    init();
+  </script>
+</body>
+</html>

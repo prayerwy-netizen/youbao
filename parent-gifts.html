@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>礼物管理 - 宥宝礼物兑换系统</title>
+  <link rel="stylesheet" href="css/common.css?v=5">
+  <link rel="stylesheet" href="css/components.css?v=5">
+  <style>
+    body {
+      background: var(--bg-light);
+      padding-bottom: 80px;
+    }
+
+    .page-content {
+      padding: var(--spacing-lg) var(--spacing-md);
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .action-bar {
+      display: flex;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .gifts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--spacing-lg);
+    }
+
+    .gift-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-normal);
+      overflow: hidden;
+      transition: all var(--transition-normal) ease;
+    }
+
+    .gift-card.disabled {
+      opacity: 0.5;
+    }
+
+    .gift-image-container {
+      position: relative;
+      width: 100%;
+      height: 180px;
+      background: var(--bg-light);
+      overflow: hidden;
+    }
+
+    .gift-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .gift-status-badge {
+      position: absolute;
+      top: var(--spacing-sm);
+      right: var(--spacing-sm);
+      padding: 4px 12px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(0, 0, 0, 0.6);
+      color: var(--white);
+    }
+
+    .gift-status-badge.enabled {
+      background: var(--success-color);
+    }
+
+    .gift-info {
+      padding: var(--spacing-md);
+    }
+
+    .gift-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-dark);
+      margin-bottom: var(--spacing-sm);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .gift-score-display {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--gold-color);
+      font-family: var(--font-mono);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .gift-actions {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+
+    .gift-action-btn {
+      flex: 1;
+      height: 40px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition-normal) ease;
+    }
+
+    .gift-action-btn.toggle {
+      background: var(--bg-light);
+      color: var(--text-dark);
+    }
+
+    .gift-action-btn.edit {
+      background: var(--primary-color);
+      color: var(--white);
+    }
+
+    .gift-action-btn.delete {
+      background: var(--error-color);
+      color: var(--white);
+    }
+
+    .image-upload-area {
+      width: 100%;
+      height: 200px;
+      border: 2px dashed var(--border-color);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition-normal) ease;
+      position: relative;
+      overflow: hidden;
+      background: var(--bg-light);
+    }
+
+    .image-upload-area:hover {
+      border-color: var(--primary-color);
+      background: #F0F7FF;
+    }
+
+    .image-upload-preview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .image-upload-preview.show {
+      display: block;
+    }
+
+    .image-upload-placeholder {
+      text-align: center;
+      color: var(--text-light);
+    }
+
+    .image-upload-icon {
+      font-size: 48px;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .image-url-input-group {
+      display: flex;
+      gap: var(--spacing-sm);
+      margin-top: var(--spacing-sm);
+    }
+
+    @media (max-width: 767px) {
+      .gifts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 顶部导航栏 -->
+  <div class="top-nav">
+    <div class="top-nav-left">
+      <button onclick="window.location.href='parent-record.html'">◀ 返回</button>
+    </div>
+    <div class="top-nav-title">礼物管理</div>
+    <div class="top-nav-right">
+      <button onclick="utils.exitParentMode()">退出</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <div class="action-bar">
+      <button class="btn-primary" style="flex: 1;" onclick="showAddGiftModal()">➕ 新增礼物</button>
+    </div>
+
+    <div class="gifts-grid" id="giftsGrid"></div>
+
+    <div class="empty-state" id="emptyState" style="display: none;">
+      <div class="empty-state-icon">🎁</div>
+      <div class="empty-state-text">还没有礼物，快添加第一个吧！</div>
+    </div>
+  </div>
+
+  <!-- 底部菜单 -->
+  <div class="parent-menu">
+    <button class="menu-btn" onclick="window.location.href='parent-record.html'">快速记账</button>
+    <button class="menu-btn" onclick="window.location.href='parent-tasks.html'">任务管理</button>
+    <button class="menu-btn" onclick="window.location.href='parent-approval.html'">兑换审批</button>
+    <button class="menu-btn" onclick="window.location.href='parent-settings.html'">设置</button>
+  </div>
+
+  <!-- Supabase 客户端库 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase 配置 -->
+  <script src="js/supabase-config.js?v=1"></script>
+  <script src="js/common.js?v=5"></script>
+  <script>
+    utils.requireParentMode();
+
+    let gifts = [];
+    let currentImageUrl = '';
+
+    // 初始化
+    function init() {
+      loadGifts();
+    }
+
+    // 加载礼物列表
+    function loadGifts() {
+      gifts = dataManager.getGifts();
+      renderGifts();
+    }
+
+    // 渲染礼物列表
+    function renderGifts() {
+      const giftsGrid = document.getElementById('giftsGrid');
+      const emptyState = document.getElementById('emptyState');
+
+      if (gifts.length === 0) {
+        giftsGrid.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      giftsGrid.innerHTML = '';
+
+      gifts.forEach(gift => {
+        const card = document.createElement('div');
+        card.className = `gift-card ${gift.enabled ? '' : 'disabled'}`;
+
+        const defaultImage = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400&h=300&fit=crop';
+
+        card.innerHTML = `
+          <div class="gift-image-container">
+            <img src="${gift.image || defaultImage}"
+                 alt="${gift.name}"
+                 class="gift-image"
+                 onerror="this.src='https://via.placeholder.com/400x300?text=礼物图片'">
+            <div class="gift-status-badge ${gift.enabled ? 'enabled' : ''}">${gift.enabled ? '启用' : '禁用'}</div>
+          </div>
+          <div class="gift-info">
+            <div class="gift-name">${gift.name}</div>
+            <div class="gift-score-display">${gift.score}分</div>
+            <div class="gift-actions">
+              <button class="gift-action-btn toggle" onclick="toggleGift(${gift.id})">
+                ${gift.enabled ? '禁用' : '启用'}
+              </button>
+              <button class="gift-action-btn edit" onclick="editGift(${gift.id})">✏️ 编辑</button>
+              <button class="gift-action-btn delete" onclick="deleteGift(${gift.id})">🗑️</button>
+            </div>
+          </div>
+        `;
+
+        giftsGrid.appendChild(card);
+      });
+    }
+
+    // 切换礼物启用状态
+    function toggleGift(giftId) {
+      const gift = gifts.find(g => g.id === giftId);
+      if (!gift) return;
+
+      gift.enabled = !gift.enabled;
+      dataManager.updateGift(gift);
+      loadGifts();
+      utils.showToast(gift.enabled ? '礼物已启用' : '礼物已禁用');
+    }
+
+    // 显示新增礼物弹窗
+    function showAddGiftModal() {
+      currentImageUrl = '';
+
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal" style="max-width: 500px;">
+          <h3 class="modal-title">新增礼物</h3>
+          <form id="giftForm" onsubmit="submitGift(event)">
+            <div class="form-group">
+              <label class="form-label form-label-required">礼物图片</label>
+              <div class="image-upload-area" onclick="document.getElementById('imageUrlInput').focus()">
+                <img id="imagePreview" class="image-upload-preview" alt="预览">
+                <div class="image-upload-placeholder" id="uploadPlaceholder">
+                  <div class="image-upload-icon">🖼️</div>
+                  <div>输入图片网址</div>
+                </div>
+              </div>
+              <div class="image-url-input-group">
+                <input type="url" class="input" id="imageUrlInput"
+                       placeholder="粘贴图片网址（https://...）"
+                       oninput="previewImage(this.value)">
+              </div>
+              <div style="font-size: 12px; color: var(--text-light); margin-top: 4px;">
+                💡 提示：可从unsplash.com、pexels.com等网站复制图片链接
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required">礼物名称</label>
+              <input type="text" class="input" id="giftName" placeholder="例如：电话手表" required maxlength="30">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required">所需积分</label>
+              <input type="number" class="input" id="giftScore" placeholder="需要多少积分兑换" required min="1">
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn-secondary btn-half" onclick="this.closest('.modal-overlay').remove()">取消</button>
+              <button type="submit" class="btn-primary btn-half">保存</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      setTimeout(() => overlay.classList.add('show'), 10);
+
+      overlay.onclick = (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('show');
+          setTimeout(() => overlay.remove(), 200);
+        }
+      };
+    }
+
+    // 预览图片
+    function previewImage(url) {
+      currentImageUrl = url;
+      const preview = document.getElementById('imagePreview');
+      const placeholder = document.getElementById('uploadPlaceholder');
+
+      if (url && url.startsWith('http')) {
+        preview.src = url;
+        preview.classList.add('show');
+        placeholder.style.display = 'none';
+      } else {
+        preview.classList.remove('show');
+        placeholder.style.display = 'block';
+      }
+    }
+
+    // 提交礼物
+    function submitGift(event) {
+      event.preventDefault();
+
+      const name = document.getElementById('giftName').value.trim();
+      const score = parseInt(document.getElementById('giftScore').value);
+      const image = currentImageUrl || '';
+
+      if (!name) {
+        utils.showToast('请输入礼物名称', 'error');
+        return;
+      }
+
+      if (score < 1) {
+        utils.showToast('积分必须大于0', 'error');
+        return;
+      }
+
+      const gift = {
+        name,
+        image,
+        score,
+        enabled: true
+      };
+
+      const editId = event.target.dataset.editId;
+      if (editId) {
+        gift.id = parseInt(editId);
+        dataManager.updateGift(gift);
+        utils.showToast('礼物已更新');
+      } else {
+        dataManager.addGift(gift);
+        utils.showToast('礼物已添加');
+      }
+
+      loadGifts();
+      document.querySelector('.modal-overlay').remove();
+    }
+
+    // 编辑礼物
+    function editGift(giftId) {
+      const gift = gifts.find(g => g.id === giftId);
+      if (!gift) return;
+
+      currentImageUrl = gift.image || '';
+
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal" style="max-width: 500px;">
+          <h3 class="modal-title">编辑礼物</h3>
+          <form id="giftForm" onsubmit="submitGift(event)" data-edit-id="${gift.id}">
+            <div class="form-group">
+              <label class="form-label form-label-required">礼物图片</label>
+              <div class="image-upload-area" onclick="document.getElementById('imageUrlInput').focus()">
+                <img id="imagePreview" class="image-upload-preview ${currentImageUrl ? 'show' : ''}"
+                     src="${currentImageUrl}" alt="预览">
+                <div class="image-upload-placeholder" id="uploadPlaceholder"
+                     style="${currentImageUrl ? 'display: none;' : ''}">
+                  <div class="image-upload-icon">🖼️</div>
+                  <div>输入图片网址</div>
+                </div>
+              </div>
+              <div class="image-url-input-group">
+                <input type="url" class="input" id="imageUrlInput"
+                       placeholder="粘贴图片网址（https://...）"
+                       value="${currentImageUrl}"
+                       oninput="previewImage(this.value)">
+              </div>
+              <div style="font-size: 12px; color: var(--text-light); margin-top: 4px;">
+                💡 提示：可从unsplash.com、pexels.com等网站复制图片链接
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required">礼物名称</label>
+              <input type="text" class="input" id="giftName" placeholder="例如：电话手表"
+                     value="${gift.name}" required maxlength="30">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required">所需积分</label>
+              <input type="number" class="input" id="giftScore" placeholder="需要多少积分兑换"
+                     value="${gift.score}" required min="1">
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn-secondary btn-half" onclick="this.closest('.modal-overlay').remove()">取消</button>
+              <button type="submit" class="btn-primary btn-half">保存</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      setTimeout(() => overlay.classList.add('show'), 10);
+
+      overlay.onclick = (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('show');
+          setTimeout(() => overlay.remove(), 200);
+        }
+      };
+    }
+
+    // 删除礼物
+    function deleteGift(giftId) {
+      const gift = gifts.find(g => g.id === giftId);
+      if (!gift) return;
+
+      utils.showConfirm(
+        '删除礼物',
+        `确定要删除礼物"${gift.name}"吗？\n\n注意：相关的兑换申请也将被删除。`,
+        () => {
+          dataManager.deleteGift(giftId);
+          utils.showToast('礼物已删除');
+          loadGifts();
+        }
+      );
+    }
+
+    // 页面加载完成后初始化
+    init();
+  </script>
+</body>
+</html>

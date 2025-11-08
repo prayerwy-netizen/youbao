@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>兑换审批 - 宥宝礼物兑换系统</title>
+  <link rel="stylesheet" href="css/common.css?v=5">
+  <link rel="stylesheet" href="css/components.css?v=5">
+  <style>
+    body {
+      background: var(--bg-light);
+      padding-bottom: 80px;
+    }
+
+    .page-content {
+      padding: var(--spacing-lg) var(--spacing-md);
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .tabs {
+      display: flex;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-lg);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .tab {
+      flex: 1;
+      height: 44px;
+      background: transparent;
+      border: none;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-medium);
+      cursor: pointer;
+      position: relative;
+      transition: all var(--transition-normal) ease;
+    }
+
+    .tab.active {
+      color: var(--primary-color);
+    }
+
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--primary-color);
+    }
+
+    .tab-badge {
+      display: inline-block;
+      min-width: 20px;
+      height: 20px;
+      line-height: 20px;
+      padding: 0 6px;
+      background: var(--error-color);
+      color: var(--white);
+      border-radius: 10px;
+      font-size: 12px;
+      margin-left: 4px;
+    }
+
+    .requests-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+    }
+
+    .request-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-normal);
+      padding: var(--spacing-md);
+      transition: all var(--transition-normal) ease;
+    }
+
+    .request-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .request-gift-image {
+      width: 80px;
+      height: 80px;
+      border-radius: var(--radius-md);
+      object-fit: cover;
+      background: var(--bg-light);
+    }
+
+    .request-info {
+      flex: 1;
+    }
+
+    .request-gift-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-dark);
+      margin-bottom: 4px;
+    }
+
+    .request-score {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--gold-color);
+      font-family: var(--font-mono);
+      margin-bottom: 4px;
+    }
+
+    .request-date {
+      font-size: 14px;
+      color: var(--text-light);
+    }
+
+    .request-status {
+      padding: 4px 12px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .request-status.pending {
+      background: #FFF7E6;
+      color: var(--warning-color);
+    }
+
+    .request-status.approved {
+      background: #F6FFED;
+      color: var(--success-color);
+    }
+
+    .request-status.rejected {
+      background: #FFF1F0;
+      color: var(--error-color);
+    }
+
+    .request-actions {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+
+    .request-action-btn {
+      flex: 1;
+      height: 44px;
+      border-radius: var(--radius-md);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-normal) ease;
+    }
+
+    .request-action-btn.approve {
+      background: var(--success-color);
+      color: var(--white);
+    }
+
+    .request-action-btn.reject {
+      background: var(--error-color);
+      color: var(--white);
+    }
+
+    .current-score-info {
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+      color: var(--white);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .current-score-label {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .current-score-value {
+      font-size: 32px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+  </style>
+</head>
+<body>
+  <!-- 顶部导航栏 -->
+  <div class="top-nav">
+    <div class="top-nav-left">
+      <button onclick="window.location.href='parent-record.html'">◀ 返回</button>
+    </div>
+    <div class="top-nav-title">兑换审批</div>
+    <div class="top-nav-right">
+      <button onclick="utils.exitParentMode()">退出</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <!-- 当前总积分 -->
+    <div class="current-score-info">
+      <div>
+        <div class="current-score-label">孩子当前积分</div>
+      </div>
+      <div class="current-score-value" id="currentScore">0</div>
+    </div>
+
+    <!-- 标签页 -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('pending')">
+        待审批<span class="tab-badge" id="pendingCount">0</span>
+      </button>
+      <button class="tab" onclick="switchTab('history')">
+        历史记录
+      </button>
+    </div>
+
+    <!-- 申请列表 -->
+    <div class="requests-list" id="requestsList"></div>
+
+    <div class="empty-state" id="emptyState" style="display: none;">
+      <div class="empty-state-icon">📋</div>
+      <div class="empty-state-text" id="emptyText">暂无待审批申请</div>
+    </div>
+  </div>
+
+  <!-- 底部菜单 -->
+  <div class="parent-menu">
+    <button class="menu-btn" onclick="window.location.href='parent-record.html'">快速记账</button>
+    <button class="menu-btn" onclick="window.location.href='parent-tasks.html'">任务管理</button>
+    <button class="menu-btn" onclick="window.location.href='parent-gifts.html'">礼物管理</button>
+    <button class="menu-btn" onclick="window.location.href='parent-settings.html'">设置</button>
+  </div>
+
+  <!-- Supabase 客户端库 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase 配置 -->
+  <script src="js/supabase-config.js?v=1"></script>
+  <script src="js/common.js?v=5"></script>
+  <script>
+    utils.requireParentMode();
+
+    let currentTab = 'pending';
+    let requests = [];
+    let gifts = [];
+
+    // 初始化
+    function init() {
+      // 更新当前积分
+      const totalScore = dataManager.getTotalScore();
+      document.getElementById('currentScore').textContent = totalScore;
+
+      // 加载数据
+      gifts = dataManager.getGifts();
+      loadRequests();
+    }
+
+    // 加载申请列表
+    function loadRequests() {
+      requests = dataManager.getRequests().sort((a, b) => new Date(b.date) - new Date(a.date));
+      updatePendingCount();
+      renderRequests();
+    }
+
+    // 更新待审批数量
+    function updatePendingCount() {
+      const pendingCount = requests.filter(r => r.status === 'pending').length;
+      document.getElementById('pendingCount').textContent = pendingCount;
+    }
+
+    // 切换标签
+    function switchTab(tab) {
+      currentTab = tab;
+
+      // 更新标签状态
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+
+      // 重新渲染
+      renderRequests();
+    }
+
+    // 渲染申请列表
+    function renderRequests() {
+      const requestsList = document.getElementById('requestsList');
+      const emptyState = document.getElementById('emptyState');
+      const emptyText = document.getElementById('emptyText');
+
+      // 筛选申请
+      let filteredRequests = [];
+      if (currentTab === 'pending') {
+        filteredRequests = requests.filter(r => r.status === 'pending');
+        emptyText.textContent = '暂无待审批申请';
+      } else {
+        filteredRequests = requests.filter(r => r.status !== 'pending');
+        emptyText.textContent = '暂无历史记录';
+      }
+
+      if (filteredRequests.length === 0) {
+        requestsList.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      requestsList.innerHTML = '';
+
+      filteredRequests.forEach(request => {
+        const gift = gifts.find(g => g.id === request.giftId);
+        const giftImage = gift ? (gift.image || 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=160&h=160&fit=crop') : 'https://via.placeholder.com/160?text=礼物';
+
+        const card = document.createElement('div');
+        card.className = 'request-card';
+
+        const dateStr = utils.formatDate(new Date(request.date));
+
+        let actionsHTML = '';
+        if (request.status === 'pending') {
+          actionsHTML = `
+            <div class="request-actions">
+              <button class="request-action-btn reject" onclick="handleRequest(${request.id}, 'rejected')">拒绝</button>
+              <button class="request-action-btn approve" onclick="handleRequest(${request.id}, 'approved')">批准</button>
+            </div>
+          `;
+        } else {
+          const statusText = request.status === 'approved' ? '已批准' : '已拒绝';
+          actionsHTML = `
+            <div class="request-status ${request.status}">${statusText}</div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div class="request-header">
+            <img src="${giftImage}"
+                 alt="${request.giftName}"
+                 class="request-gift-image"
+                 onerror="this.src='https://via.placeholder.com/160?text=礼物'">
+            <div class="request-info">
+              <div class="request-gift-name">${request.giftName}</div>
+              <div class="request-score">${request.score}分</div>
+              <div class="request-date">${dateStr}</div>
+            </div>
+          </div>
+          ${actionsHTML}
+        `;
+
+        requestsList.appendChild(card);
+      });
+    }
+
+    // 处理申请
+    function handleRequest(requestId, status) {
+      const request = requests.find(r => r.id === requestId);
+      if (!request) return;
+
+      const actionText = status === 'approved' ? '批准' : '拒绝';
+      const currentScore = dataManager.getTotalScore();
+
+      // 如果是批准，检查积分是否充足
+      if (status === 'approved' && currentScore < request.score) {
+        utils.showToast('当前积分不足，无法批准兑换', 'error');
+        return;
+      }
+
+      utils.showConfirm(
+        `确认${actionText}`,
+        `确定要${actionText}兑换"${request.giftName}"吗？${status === 'approved' ? '\n\n批准后将扣除' + request.score + '积分。' : ''}`,
+        () => {
+          // 更新申请状态
+          dataManager.updateRequest(requestId, status);
+
+          // 如果批准，扣除积分
+          if (status === 'approved') {
+            dataManager.addRecord({
+              taskId: 0,
+              taskName: `兑换礼物：${request.giftName}`,
+              score: -request.score,
+              note: '礼物兑换成功'
+            });
+
+            // 显示礼花动画
+            utils.showConfetti();
+            utils.showToast('兑换成功！积分已扣除 🎉');
+          } else {
+            utils.showToast('已拒绝兑换申请');
+          }
+
+          // 重新加载数据
+          init();
+        }
+      );
+    }
+
+    // 页面加载完成后初始化
+    init();
+  </script>
+</body>
+</html>

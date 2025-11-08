@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>任务管理 - 宥宝礼物兑换系统</title>
+  <link rel="stylesheet" href="css/common.css?v=5">
+  <link rel="stylesheet" href="css/components.css?v=5">
+  <style>
+    body {
+      background: var(--bg-light);
+      padding-bottom: 80px;
+    }
+
+    .page-content {
+      padding: var(--spacing-lg) var(--spacing-md);
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .action-bar {
+      display: flex;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .tasks-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+    }
+
+    .task-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-normal);
+      padding: var(--spacing-md);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      transition: all var(--transition-normal) ease;
+    }
+
+    .task-card.disabled {
+      opacity: 0.5;
+    }
+
+    .task-toggle {
+      width: 44px;
+      height: 24px;
+      background: #D9D9D9;
+      border-radius: 12px;
+      position: relative;
+      cursor: pointer;
+      transition: background var(--transition-normal) ease;
+    }
+
+    .task-toggle.enabled {
+      background: var(--success-color);
+    }
+
+    .task-toggle::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: var(--white);
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: left var(--transition-normal) ease;
+    }
+
+    .task-toggle.enabled::after {
+      left: 22px;
+    }
+
+    .task-info {
+      flex: 1;
+    }
+
+    .task-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-bottom: 4px;
+    }
+
+    .task-name {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-dark);
+    }
+
+    .task-type-badge {
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .task-type-badge.positive {
+      background: #F6FFED;
+      color: var(--success-color);
+    }
+
+    .task-type-badge.negative {
+      background: #FFF1F0;
+      color: var(--error-color);
+    }
+
+    .task-details {
+      font-size: 14px;
+      color: var(--text-medium);
+    }
+
+    .task-score {
+      font-weight: 600;
+      color: var(--gold-color);
+      font-family: var(--font-mono);
+    }
+
+    .task-actions {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+
+    .task-action-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      background: var(--bg-light);
+      color: var(--primary-color);
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition-normal) ease;
+    }
+
+    .task-action-btn:active {
+      background: var(--primary-color);
+      color: var(--white);
+    }
+
+    .task-action-btn.delete {
+      color: var(--error-color);
+    }
+
+    .task-action-btn.delete:active {
+      background: var(--error-color);
+      color: var(--white);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-md);
+    }
+
+    @media (max-width: 767px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 顶部导航栏 -->
+  <div class="top-nav">
+    <div class="top-nav-left">
+      <button onclick="window.location.href='parent-record.html'">◀ 返回</button>
+    </div>
+    <div class="top-nav-title">任务管理</div>
+    <div class="top-nav-right">
+      <button onclick="utils.exitParentMode()">退出</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <div class="action-bar">
+      <button class="btn-primary" style="flex: 1;" onclick="showAddTaskModal()">➕ 新增任务</button>
+    </div>
+
+    <div class="tasks-list" id="tasksList"></div>
+
+    <div class="empty-state" id="emptyState" style="display: none;">
+      <div class="empty-state-icon">📝</div>
+      <div class="empty-state-text">还没有任务，快添加第一个吧！</div>
+    </div>
+  </div>
+
+  <!-- 底部菜单 -->
+  <div class="parent-menu">
+    <button class="menu-btn" onclick="window.location.href='parent-record.html'">快速记账</button>
+    <button class="menu-btn" onclick="window.location.href='parent-gifts.html'">礼物管理</button>
+    <button class="menu-btn" onclick="window.location.href='parent-approval.html'">兑换审批</button>
+    <button class="menu-btn" onclick="window.location.href='parent-settings.html'">设置</button>
+  </div>
+
+  <!-- Supabase 客户端库 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase 配置 -->
+  <script src="js/supabase-config.js?v=1"></script>
+  <script src="js/common.js?v=5"></script>
+  <script>
+    utils.requireParentMode();
+
+    let tasks = [];
+
+    // 初始化
+    function init() {
+      loadTasks();
+    }
+
+    // 加载任务列表
+    function loadTasks() {
+      tasks = dataManager.getTasks();
+      renderTasks();
+    }
+
+    // 渲染任务列表
+    function renderTasks() {
+      const tasksList = document.getElementById('tasksList');
+      const emptyState = document.getElementById('emptyState');
+
+      if (tasks.length === 0) {
+        tasksList.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      tasksList.innerHTML = '';
+
+      tasks.forEach(task => {
+        const card = document.createElement('div');
+        card.className = `task-card ${task.enabled ? '' : 'disabled'}`;
+
+        const typeText = task.type === 'positive' ? '正向' : '负向';
+        const typeClass = task.type === 'positive' ? 'positive' : 'negative';
+
+        card.innerHTML = `
+          <div class="task-toggle ${task.enabled ? 'enabled' : ''}" onclick="toggleTask(${task.id})"></div>
+          <div class="task-info">
+            <div class="task-header">
+              <div class="task-name">${task.name}</div>
+              <div class="task-type-badge ${typeClass}">${typeText}</div>
+            </div>
+            <div class="task-details">
+              ${task.unit} · <span class="task-score">${task.score}分</span>
+            </div>
+          </div>
+          <div class="task-actions">
+            <button class="task-action-btn" onclick="editTask(${task.id})">✏️</button>
+            <button class="task-action-btn delete" onclick="deleteTask(${task.id})">🗑️</button>
+          </div>
+        `;
+
+        tasksList.appendChild(card);
+      });
+    }
+
+    // 切换任务启用状态
+    function toggleTask(taskId) {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      task.enabled = !task.enabled;
+      dataManager.updateTask(task);
+      loadTasks();
+      utils.showToast(task.enabled ? '任务已启用' : '任务已禁用');
+    }
+
+    // 显示新增任务弹窗
+    function showAddTaskModal() {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal">
+          <h3 class="modal-title">新增任务</h3>
+          <form id="taskForm" onsubmit="submitTask(event)">
+            <div class="form-group">
+              <label class="form-label form-label-required">任务名称</label>
+              <input type="text" class="input" id="taskName" placeholder="例如：跳绳" required maxlength="20">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label form-label-required">计量单位</label>
+                <input type="text" class="input" id="taskUnit" placeholder="例如：10个/次" required maxlength="15">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label form-label-required">参考分数</label>
+                <input type="number" class="input" id="taskScore" placeholder="可为正负数" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required">任务类型</label>
+              <select class="select" id="taskType" required>
+                <option value="positive">正向激励</option>
+                <option value="negative">负向惩罚</option>
+              </select>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn-secondary btn-half" onclick="this.closest('.modal-overlay').remove()">取消</button>
+              <button type="submit" class="btn-primary btn-half">保存</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      setTimeout(() => overlay.classList.add('show'), 10);
+
+      overlay.onclick = (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('show');
+          setTimeout(() => overlay.remove(), 200);
+        }
+      };
+    }
+
+    // 提交任务
+    function submitTask(event) {
+      event.preventDefault();
+
+      const name = document.getElementById('taskName').value.trim();
+      const unit = document.getElementById('taskUnit').value.trim();
+      const score = parseInt(document.getElementById('taskScore').value);
+      const type = document.getElementById('taskType').value;
+
+      const editId = event.target.dataset.editId;
+      if (editId) {
+        // 编辑模式:传入 taskId 和 updates 对象
+        const taskId = parseInt(editId);
+        const updates = {
+          name,
+          unit,
+          score,
+          type,
+          enabled: true
+        };
+        dataManager.updateTask(taskId, updates);
+        utils.showToast('任务已更新');
+      } else {
+        // 新建模式:传入完整的 task 对象
+        const task = {
+          name,
+          unit,
+          score,
+          type,
+          enabled: true
+        };
+        dataManager.addTask(task);
+        utils.showToast('任务已添加');
+      }
+
+      loadTasks();
+      document.querySelector('.modal-overlay').remove();
+    }
+
+    // 编辑任务
+    function editTask(taskId) {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal">
+          <h3 class="modal-title">编辑任务</h3>
+          <form id="taskForm" onsubmit="submitTask(event)" data-edit-id="${task.id}">
+            <div class="form-group">
+              <label class="form-label form-label-required">任务名称</label>
+              <input type="text" class="input" id="taskName" placeholder="例如:跳绳" value="${task.name}" required maxlength="20">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label form-label-required">计量单位</label>
+                <input type="text" class="input" id="taskUnit" placeholder="例如:10个/次" value="${task.unit}" required maxlength="15">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label form-label-required">参考分数</label>
+                <input type="number" class="input" id="taskScore" placeholder="可为正负数" value="${task.score}" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required">任务类型</label>
+              <select class="select" id="taskType" required>
+                <option value="positive" ${task.type === 'positive' ? 'selected' : ''}>正向激励</option>
+                <option value="negative" ${task.type === 'negative' ? 'selected' : ''}>负向惩罚</option>
+              </select>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn-secondary btn-half" onclick="this.closest('.modal-overlay').remove()">取消</button>
+              <button type="submit" class="btn-primary btn-half">保存</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      setTimeout(() => overlay.classList.add('show'), 10);
+
+      overlay.onclick = (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('show');
+          setTimeout(() => overlay.remove(), 200);
+        }
+      };
+    }
+
+    // 删除任务
+    function deleteTask(taskId) {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      utils.showConfirm(
+        '删除任务',
+        `确定要删除任务"${task.name}"吗？\n\n注意：已有的记录不会被删除，但任务将无法再使用。`,
+        () => {
+          dataManager.deleteTask(taskId);
+          utils.showToast('任务已删除');
+          loadTasks();
+        }
+      );
+    }
+
+    // 页面加载完成后初始化
+    init();
+  </script>
+</body>
+</html>

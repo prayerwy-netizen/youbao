@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>家长验证 - 宥宝礼物兑换系统</title>
+  <link rel="stylesheet" href="css/common.css?v=5">
+  <link rel="stylesheet" href="css/components.css?v=5">
+  <style>
+    body {
+      background: linear-gradient(135deg, var(--parent-primary), var(--primary-color));
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-container {
+      width: 90%;
+      max-width: 400px;
+      background: var(--white);
+      border-radius: var(--radius-xl);
+      padding: var(--spacing-xxl) var(--spacing-lg);
+      box-shadow: var(--shadow-deep);
+    }
+
+    .login-title {
+      text-align: center;
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text-dark);
+      margin-bottom: var(--spacing-xxl);
+    }
+
+    .pin-display {
+      display: flex;
+      justify-content: center;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-xxl);
+    }
+
+    .pin-dot {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-round);
+      transition: all var(--transition-normal) ease;
+    }
+
+    .pin-dot.filled {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+
+    .pin-keyboard {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .pin-key {
+      aspect-ratio: 1;
+      background: var(--bg-light);
+      border-radius: var(--radius-md);
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text-dark);
+      cursor: pointer;
+      transition: all var(--transition-normal) ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pin-key:active {
+      transform: scale(0.95);
+      background: var(--primary-light);
+      color: var(--white);
+    }
+
+    .error-message {
+      text-align: center;
+      color: var(--error-color);
+      font-size: 14px;
+      min-height: 20px;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .back-button {
+      display: block;
+      text-align: center;
+      color: var(--text-light);
+      font-size: 14px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h1 class="login-title">🔐 家长验证</h1>
+
+    <div class="pin-display" id="pinDisplay">
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+    </div>
+
+    <div class="error-message" id="errorMessage"></div>
+
+    <div class="pin-keyboard">
+      <button type="button" class="pin-key" onclick="addPin(1)">1</button>
+      <button type="button" class="pin-key" onclick="addPin(2)">2</button>
+      <button type="button" class="pin-key" onclick="addPin(3)">3</button>
+      <button type="button" class="pin-key" onclick="addPin(4)">4</button>
+      <button type="button" class="pin-key" onclick="addPin(5)">5</button>
+      <button type="button" class="pin-key" onclick="addPin(6)">6</button>
+      <button type="button" class="pin-key" onclick="addPin(7)">7</button>
+      <button type="button" class="pin-key" onclick="addPin(8)">8</button>
+      <button type="button" class="pin-key" onclick="addPin(9)">9</button>
+      <button type="button" class="pin-key" onclick="clearPin()">清除</button>
+      <button type="button" class="pin-key" onclick="addPin(0)">0</button>
+      <button type="button" class="pin-key" onclick="deletePin()">删除</button>
+    </div>
+
+    <a href="index.html" class="back-button">返回首页</a>
+  </div>
+
+  <!-- Supabase 客户端库 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase 配置 -->
+  <script src="js/supabase-config.js?v=1"></script>
+  <script src="js/common.js?v=5"></script>
+  <script>
+    let pin = '';
+    let attempts = 0;
+    let lockUntil = 0;
+
+    function updateDisplay() {
+      const dots = document.querySelectorAll('.pin-dot');
+      dots.forEach((dot, index) => {
+        if (index < pin.length) {
+          dot.classList.add('filled');
+        } else {
+          dot.classList.remove('filled');
+        }
+      });
+    }
+
+    function addPin(number) {
+      if (Date.now() < lockUntil) {
+        const remainingSeconds = Math.ceil((lockUntil - Date.now()) / 1000);
+        document.getElementById('errorMessage').textContent = `请等待${remainingSeconds}秒后重试`;
+        return;
+      }
+
+      if (pin.length < 4) {
+        pin += number;
+        updateDisplay();
+
+        if (pin.length === 4) {
+          verifyPin();
+        }
+      }
+    }
+
+    function deletePin() {
+      if (pin.length > 0) {
+        pin = pin.slice(0, -1);
+        updateDisplay();
+      }
+    }
+
+    function clearPin() {
+      pin = '';
+      updateDisplay();
+      document.getElementById('errorMessage').textContent = '';
+    }
+
+    function verifyPin() {
+      if (dataManager.verifyPin(pin)) {
+        utils.enterParentMode();
+        utils.showToast('验证成功！');
+        setTimeout(() => {
+          window.location.href = 'parent-record.html';
+        }, 500);
+      } else {
+        attempts++;
+        if (attempts >= 3) {
+          lockUntil = Date.now() + 60000; // 锁定1分钟
+          document.getElementById('errorMessage').textContent = 'PIN码错误次数过多，请等待1分钟';
+          attempts = 0;
+        } else {
+          document.getElementById('errorMessage').textContent = `PIN码错误，还可尝试${3 - attempts}次`;
+        }
+
+        // 抖动动画
+        const container = document.querySelector('.login-container');
+        container.style.animation = 'shake 0.5s';
+        setTimeout(() => container.style.animation = '', 500);
+
+        clearPin();
+      }
+    }
+
+    // 添加抖动动画
+    const shakeStyle = document.createElement('style');
+    shakeStyle.textContent = `
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-10px); }
+        75% { transform: translateX(10px); }
+      }
+    `;
+    document.head.appendChild(shakeStyle);
+  </script>
+</body>
+</html>
